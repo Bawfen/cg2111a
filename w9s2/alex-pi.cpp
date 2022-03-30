@@ -271,7 +271,7 @@ void sub_callback(const sensor_msgs::Joy &joy)
   }
   else if (joy.buttons[BUTTON_SQUARE] != 0)
   {
-    TURN_SPEED = 85;
+    TURN_SPEED = 83;
     cmd = 'l';
   }
   else if (joy.buttons[DPAD_RIGHT] != 0)
@@ -281,7 +281,7 @@ void sub_callback(const sensor_msgs::Joy &joy)
   }
   else if (joy.buttons[BUTTON_CIRCLE] != 0)
   {
-    TURN_SPEED = 85;
+    TURN_SPEED = 83;
     cmd = 'r';
   }
   else if (joy.buttons[10] == 1)
