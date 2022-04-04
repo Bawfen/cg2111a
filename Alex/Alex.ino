@@ -322,7 +322,6 @@ ISR(TIMER2_OVF_vect) {
   } else if (dir == BACKWARD) {
     PORTD |= RR_PORT;
     PORTB |= LR_PORT;
-
   } else if (dir == LEFT) {
     PORTD |= RF_PORT;
     PORTB |= LR_PORT;
@@ -398,11 +397,11 @@ void setupMotors()
    */
   cli();
   TCNT2 = 0;
-   OCR2A = 0;
-   TIMSK2 = 0b00000011;
-   TCCR2A = 0b00000011;
-   TCCR2B = 0b00000000;
-   sei();
+  OCR2A = 0;
+  TIMSK2 = 0b00000011;
+  TCCR2A = 0b00000011;
+  TCCR2B = 0b00000000;
+  sei();
 
 }
 
@@ -411,7 +410,7 @@ void setupMotors()
 // blank.
 void startMotors()
 {
-  TCCR2B |= 0b00000010;
+  TCCR2B |= 0b00000011;
 }
 
 // Convert percentages to PWM values
@@ -534,10 +533,11 @@ void left(float ang, float speed)
   // To turn left we reverse the left wheel and move
   // the right wheel forward.
   // analogWrite(LR, 0);
-  analogWrite(LR, val);
-  analogWrite(RF, val);
-  analogWrite(LF, 0);
-  analogWrite(RR, 0);
+  // analogWrite(LR, val);
+  // analogWrite(RF, val);
+  // analogWrite(LF, 0);
+  // analogWrite(RR, 0);
+  OCR2A =val;
 }
 
 // Turn Alex right "ang" degrees at speed "speed".
@@ -568,10 +568,11 @@ void right(float ang, float speed)
   // To turn right we reverse the right wheel and move
   // the left wheel forward.
   // analogWrite(RR, 0);
-  analogWrite(RR, val);
-  analogWrite(LF, val);
-  analogWrite(LR, 0);
-  analogWrite(RF, 0);
+  // analogWrite(RR, val);
+  // analogWrite(LF, val);
+  // analogWrite(LR, 0);
+  // analogWrite(RF, 0);
+  OCR2A =val;
 }
 
 // Stop Alex. To replace with bare-metal code later.
@@ -584,10 +585,7 @@ void stop()
   // analogWrite(LR, 0);
   // analogWrite(RF, 0);
   // analogWrite(RR, 0);
-  OCR0A = 0;
-  OCR0B = 0;
-  OCR1A = 0;
-  OCR1B = 0;
+  OCR2A = 0;
 }
 
 /*
