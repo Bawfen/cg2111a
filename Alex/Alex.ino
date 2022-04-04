@@ -445,6 +445,10 @@ void forward(float dist, float speed)
   // analogWrite(RR, 0);
   OCR0A = val;
   OCR1A = val;
+  PORTD |= RF_PORT;
+  PORTD &= ~RR_PORT;
+  PORTB |= LF_PORT;
+  PORTB &= ~LR_PORT;
 
 }
 
@@ -482,6 +486,10 @@ void reverse(float dist, float speed)
   // analogWrite(RF, 0);
   OCR0A = val;
   OCR1A = val;
+  PORTD |= RR_PORT;
+  PORTD &= ~RF_PORT;
+  PORTB |= LR_PORT;
+  PORTB &= ~LF_PORT;
   
 }
 
