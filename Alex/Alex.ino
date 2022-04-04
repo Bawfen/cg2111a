@@ -384,6 +384,8 @@ void setupMotors()
   TIMSK1 = 0b00000011;
   TCCR1A = 0b10100001;
   TCCR1B = 0b00000000;
+  DDRD |= RF_PORT | RR_PORT;
+  DDRB |= LF_PORT | LR_PORT
   sei();
 
 }
