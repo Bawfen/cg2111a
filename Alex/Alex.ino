@@ -309,6 +309,29 @@ ISR(INT1_vect)
 }
 
 
+
+ISR(TIMER2_COMPA_vect) {
+  PORTB &= 0b11111001;
+  PORTD &= 0b10011111;
+}
+
+ISR(TIMER2_OVF_vect) {
+  if (dir == FORWARD) {
+    PORTD |= RF_PORT;
+    PORTB |= LF_PORT;
+  } else if (dir == BACKWARD) {
+    PORTD |= RR_PORT;
+    PORTB |= LR_PORT;
+
+  } else if (dir == LEFT) {
+    PORTD |= RF_PORT;
+    PORTB |= LR_PORT;
+  } else if (dir == RIGHT) {
+    PORTD |= RR_PORT;
+    PORTB |= LF_PORT;
+  }
+}
+
 // Implement INT0 and INT1 ISRs above.
 
 /*
@@ -368,25 +391,18 @@ void writeSerial(const char *buffer, int len)
 void setupMotors()
 {
   /* Our motor set up is:
-   *    #define LF 9  // PB1  OC1A
+   *   #define LF 9  // PB1  OC1A
    *   #define LR 10 // PB2  OC1B
    *   #define RF 6  // PD6  OC0A
    *   #define RR 5  // PD5  OC0B
    */
   cli();
-  TCNT0 = 0;
-  OCR0A = 0;
-  TIMSK0 = 0b00000011;
-  TCCR0A = 0b10100001;
-  TCCR0B = 0b00000000;
-  TCNT1 = 0;
-  OCR1A = 0;
-  TIMSK1 = 0b00000011;
-  TCCR1A = 0b10100001;
-  TCCR1B = 0b00000000;
-  DDRD |= RF_PORT | RR_PORT;
-  DDRB |= LF_PORT | LR_PORT
-  sei();
+  TCNT2 = 0;
+   OCR2A = 0;
+   TIMSK2 = 0b00000011;
+   TCCR2A = 0b00000011;
+   TCCR2B = 0b00000000;
+   sei();
 
 }
 
@@ -395,8 +411,7 @@ void setupMotors()
 // blank.
 void startMotors()
 {
-  TCCR0B |= 0b00000010;
-  TCCR1B |= 0b00000010;
+  TCCR2B |= 0b00000010;
 }
 
 // Convert percentages to PWM values
@@ -447,10 +462,6 @@ void forward(float dist, float speed)
   // analogWrite(RR, 0);
   OCR0A = val;
   OCR1A = val;
-  PORTD |= RF_PORT;
-  PORTD &= ~RR_PORT;
-  PORTB |= LF_PORT;
-  PORTB &= ~LR_PORT;
 
 }
 
@@ -488,10 +499,7 @@ void reverse(float dist, float speed)
   // analogWrite(RF, 0);
   OCR0A = val;
   OCR1A = val;
-  PORTD |= RR_PORT;
-  PORTD &= ~RF_PORT;
-  PORTB |= LR_PORT;
-  PORTB &= ~LF_PORT;
+  
   
 }
 
