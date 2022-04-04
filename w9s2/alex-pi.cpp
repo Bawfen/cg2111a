@@ -184,7 +184,7 @@ void getParams(TPacket *commandPacket)
   flushInput();
 }
 
-int SPEED = 60;
+int SPEED = 55;
 int TURN_SPEED = 62;
 
 void sendCommand(char command)
@@ -211,6 +211,7 @@ void sendCommand(char command)
 
   case 'l':
   case 'L':
+    commandPacket.params[0] = 7;
     commandPacket.params[1] = TURN_SPEED;
     commandPacket.command = COMMAND_TURN_LEFT;
     sendPacket(&commandPacket);
@@ -218,6 +219,7 @@ void sendCommand(char command)
 
   case 'r':
   case 'R':
+    commandPacket.params[0] = 7;
     commandPacket.params[1] = TURN_SPEED;
     commandPacket.command = COMMAND_TURN_RIGHT;
     sendPacket(&commandPacket);
@@ -271,7 +273,7 @@ void sub_callback(const sensor_msgs::Joy &joy)
   }
   else if (joy.buttons[BUTTON_SQUARE] != 0)
   {
-    TURN_SPEED = 83;
+    TURN_SPEED = 80;
     cmd = 'l';
   }
   else if (joy.buttons[DPAD_RIGHT] != 0)
@@ -281,7 +283,7 @@ void sub_callback(const sensor_msgs::Joy &joy)
   }
   else if (joy.buttons[BUTTON_CIRCLE] != 0)
   {
-    TURN_SPEED = 83;
+    TURN_SPEED = 80;
     cmd = 'r';
   }
   else if (joy.buttons[10] == 1)
@@ -301,6 +303,15 @@ void sub_callback(const sensor_msgs::Joy &joy)
   {
     SPEED -= 5;
     ROS_INFO("Speed: %d", SPEED);
+  }else if(joy.buttons[8] == 1){
+    cmd = 'r';
+    for(int i = 0; i < 40; i+=1){
+      TURN_SPEED = 76;
+      sendCommand(cmd);
+      curr_cmd = cmd;
+      usleep(450000);
+      
+    }
   }
   else
   {
@@ -312,7 +323,7 @@ void sub_callback(const sensor_msgs::Joy &joy)
     sendCommand(cmd);
     curr_cmd = cmd;
     ROS_INFO("%c", cmd);
-    usleep(200000);
+    usleep(400000);
   }
 }
 /* void subscriberCallback(const sensor_msgs::Joy &joy){
