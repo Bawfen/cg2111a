@@ -399,7 +399,7 @@ void setupMotors()
   TCNT2 = 0;
   OCR2A = 0;
   TIMSK2 = 0b00000011;
-  TCCR2A = 0b00000101;
+  TCCR2A = 0b00000011;
   TCCR2B = 0b00000000;
   sei();
 
