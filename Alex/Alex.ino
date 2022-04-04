@@ -33,10 +33,14 @@ volatile TDirection dir = FORWARD;
 
 // Motor control pins. You need to adjust these till
 // Alex moves in the correct direction
-#define LF 9  // Left forward pin
-#define LR 10 // Left reverse pin
-#define RF 6  // Right forward pin
-#define RR 5  // Right reverse pin
+#define LF 9  // Left forward pin PB1  OC1A
+#define LR 10 // Left reverse pin PB2  OC1B
+#define RF 6  // Right forward pin PD6  OC0A
+#define RR 5  // Right reverse pin PD5  OC0B
+#define LF_PORT (1 << 1)
+#define LR_PORT (1 << 2)
+#define RF_PORT (1 << 6)
+#define RR_PORT (1 << 5)
 
 // For angle calculations
 #define PI 3.141592654
@@ -304,6 +308,7 @@ ISR(INT1_vect)
   rightISR();
 }
 
+
 // Implement INT0 and INT1 ISRs above.
 
 /*
@@ -363,11 +368,24 @@ void writeSerial(const char *buffer, int len)
 void setupMotors()
 {
   /* Our motor set up is:
-   *    A1IN - Pin 5, PD5, OC0B
-   *    A2IN - Pin 6, PD6, OC0A
-   *    B1IN - Pin 10, PB2, OC1B
-   *    B2In - pIN 11, PB3, OC2A
+   *    #define LF 9  // PB1  OC1A
+   *   #define LR 10 // PB2  OC1B
+   *   #define RF 6  // PD6  OC0A
+   *   #define RR 5  // PD5  OC0B
    */
+  cli();
+  TCNT0 = 0;
+  OCR0A = 0;
+  TIMSK0 = 0b00000011;
+  TCCR0A = 0b10100001;
+  TCCR0B = 0b00000000;
+  TCNT1 = 0;
+  OCR1A = 0;
+  TIMSK1 = 0b00000011;
+  TCCR1A = 0b10100001;
+  TCCR1B = 0b00000000;
+  sei();
+
 }
 
 // Start the PWM for Alex's motors.
@@ -375,6 +393,8 @@ void setupMotors()
 // blank.
 void startMotors()
 {
+  TCCR0B |= 0b00000010;
+  TCCR1B |= 0b00000010;
 }
 
 // Convert percentages to PWM values
@@ -419,10 +439,13 @@ void forward(float dist, float speed)
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
 
-  analogWrite(LF, val);
-  analogWrite(RF, val + pwmVal(MOTOR_OFFSET));
-  analogWrite(LR, 0);
-  analogWrite(RR, 0);
+  // analogWrite(LF, val);
+  // analogWrite(RF, val + pwmVal(MOTOR_OFFSET));
+  // analogWrite(LR, 0);
+  // analogWrite(RR, 0);
+  OCR0A = val;
+  OCR1A = val;
+
 }
 
 // Reverse Alex "dist" cm at speed "speed".
@@ -453,10 +476,13 @@ void reverse(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  analogWrite(LR, val);
-  analogWrite(RR, val + pwmVal(MOTOR_OFFSET));
-  analogWrite(LF, 0);
-  analogWrite(RF, 0);
+  // analogWrite(LR, val);
+  // analogWrite(RR, val + pwmVal(MOTOR_OFFSET));
+  // analogWrite(LF, 0);
+  // analogWrite(RF, 0);
+  OCR0A = val;
+  OCR1A = val;
+  
 }
 
 // Turn Alex left "ang" degrees at speed "speed".
@@ -538,10 +564,14 @@ void stop()
 
   dir = STOP;
 
-  analogWrite(LF, 0);
-  analogWrite(LR, 0);
-  analogWrite(RF, 0);
-  analogWrite(RR, 0);
+  // analogWrite(LF, 0);
+  // analogWrite(LR, 0);
+  // analogWrite(RF, 0);
+  // analogWrite(RR, 0);
+  OCR0A = 0;
+  OCR0B = 0;
+  OCR1A = 0;
+  OCR1B = 0;
 }
 
 /*
