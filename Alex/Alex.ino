@@ -460,8 +460,7 @@ void forward(float dist, float speed)
   // analogWrite(RF, val + pwmVal(MOTOR_OFFSET));
   // analogWrite(LR, 0);
   // analogWrite(RR, 0);
-  OCR0A = val;
-  OCR1A = val;
+  OCR2A =val;
 
 }
 
@@ -497,8 +496,7 @@ void reverse(float dist, float speed)
   // analogWrite(RR, val + pwmVal(MOTOR_OFFSET));
   // analogWrite(LF, 0);
   // analogWrite(RF, 0);
-  OCR0A = val;
-  OCR1A = val;
+  OCR2A =val;
   
   
 }
