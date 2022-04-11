@@ -10,7 +10,7 @@
 #include <sensor_msgs/Joy.h>
 #include "constants.h"
 
-#define PORT_NAME "/dev/ttyACM0"
+#define PORT_NAME "/dev/ttyACM1"
 #define BAUD_RATE B9600
 
 #define BUTTON_CROSS 0
@@ -23,6 +23,7 @@
 #define DPAD_LEFT 15
 #define DPAD_RIGHT 16
 
+#define BOOST 90
 int exitFlag = 0;
 sem_t _xmitSema;
 
@@ -184,8 +185,9 @@ void getParams(TPacket *commandPacket)
   flushInput();
 }
 
-int SPEED = 55;
-int TURN_SPEED = 62;
+int change = 0;
+int SPEED = 79 + change;
+int TURN_SPEED = 87 + change ;
 
 void sendCommand(char command)
 {
@@ -193,7 +195,7 @@ void sendCommand(char command)
 
   commandPacket.packetType = PACKET_TYPE_COMMAND;
   commandPacket.params[0] = 0;
-  commandPacket.params[1] = SPEED;
+  commandPacket.params[1] = SPEED+change;
 
   switch (command)
   {
@@ -211,16 +213,16 @@ void sendCommand(char command)
 
   case 'l':
   case 'L':
-    commandPacket.params[0] = 7;
-    commandPacket.params[1] = TURN_SPEED;
+    commandPacket.params[0] = 15;
+    commandPacket.params[1] = TURN_SPEED+change;
     commandPacket.command = COMMAND_TURN_LEFT;
     sendPacket(&commandPacket);
     break;
 
   case 'r':
   case 'R':
-    commandPacket.params[0] = 7;
-    commandPacket.params[1] = TURN_SPEED;
+    commandPacket.params[0] = 15;
+    commandPacket.params[1] = TURN_SPEED+change;
     commandPacket.command = COMMAND_TURN_RIGHT;
     sendPacket(&commandPacket);
     break;
@@ -268,22 +270,22 @@ void sub_callback(const sensor_msgs::Joy &joy)
   }
   else if (joy.buttons[DPAD_LEFT] != 0)
   {
-    TURN_SPEED = 62;
+    TURN_SPEED = 75;
     cmd = 'l';
   }
   else if (joy.buttons[BUTTON_SQUARE] != 0)
   {
-    TURN_SPEED = 80;
+    TURN_SPEED = 87 +change;
     cmd = 'l';
   }
   else if (joy.buttons[DPAD_RIGHT] != 0)
   {
-    TURN_SPEED = 62;
+    TURN_SPEED = 75;
     cmd = 'r';
   }
   else if (joy.buttons[BUTTON_CIRCLE] != 0)
   {
-    TURN_SPEED = 80;
+    TURN_SPEED = 87 + change;
     cmd = 'r';
   }
   else if (joy.buttons[10] == 1)
@@ -294,26 +296,35 @@ void sub_callback(const sensor_msgs::Joy &joy)
   {
     cmd = 'g';
   }
-  else if (joy.axes[5] == -1)
+  else if (joy.buttons[4] == 1)
   {
-    SPEED += 5;
-    ROS_INFO("Speed: %d", SPEED);
-  }
-  else if (joy.axes[2] == -1)
-  {
-    SPEED -= 5;
+    if(SPEED == BOOST){
+      SPEED = 79 + change;
+      ROS_INFO("Normal_Mode");
+    }else{
+      SPEED = BOOST;
+      ROS_INFO("Boost_Mode");
+    }
+    if(SPEED >=100){
+      SPEED = 100;
+    }
     ROS_INFO("Speed: %d", SPEED);
   }else if(joy.buttons[8] == 1){
-    cmd = 'r';
-    for(int i = 0; i < 40; i+=1){
-      TURN_SPEED = 76;
+    cmd = 'l';
+    for(int i = 0; i < 25; i+=1){
+      TURN_SPEED = 87+change;
       sendCommand(cmd);
       curr_cmd = cmd;
       usleep(450000);
       
     }
-  }
-  else
+  }else if(joy.buttons[6] == 1){
+    change -= 2;
+    ROS_INFO("SPEED :%d,  TURN_SPEED: %d",SPEED+change, TURN_SPEED+change);
+  }else if(joy.buttons[7] == 1){
+    change += 2;
+    ROS_INFO("SPEED :%d,  TURN_SPEED: %d",SPEED+change, TURN_SPEED+ change);
+  }else
   {
     cmd = 's';
   }
@@ -342,8 +353,12 @@ ROS_INFO("%c",cmd);
 int main(int argc, char **argv)
 
 {
+  char port_name[] = "/dev/ttyACM0";
+  printf("Enter port:");
+  scanf("%c",&port_name[11]);
+
   // Connect to the Arduino
-  startSerial(PORT_NAME, BAUD_RATE, 8, 'N', 1, 5);
+  startSerial(port_name, BAUD_RATE, 8, 'N', 1, 5);
 
   // Sleep for two seconds
   printf("WAITING TWO SECONDS FOR ARDUINO TO REBOOT\n");
