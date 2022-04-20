@@ -1,6 +1,9 @@
 #include <serialize.h>
 #include <stdarg.h>
 #include <math.h>
+#include <CircularBuffer.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
 
 #include "packet.h"
 #include "constants.h"
@@ -16,6 +19,9 @@ typedef enum
 
 volatile TDirection dir = FORWARD;
 
+
+CircularBuffer<char, 200> _recvBuffer;
+CircularBuffer<char, 200> _sendBuffer;
 /*
  * Alex's configuration constants
  */
@@ -43,7 +49,7 @@ volatile TDirection dir = FORWARD;
 #define RR_PORT (1 << 5)
 
 // For angle calculations
-#define PI 3.141592654
+//#define PI 3.141592654/
 
 // ALex length and breadth
 #define ALEX_LENGTH 20
@@ -337,13 +343,21 @@ ISR(TIMER2_OVF_vect) {
  * Setup and start codes for serial communications
  *
  */
+
+ #define UDRIEMASK = 0b00100000
 // Set up the serial connection. For now we are using
 // Arduino Wiring, you will replace this later
 // with bare-metal code.
 void setupSerial()
 {
   // To replace later with bare-metal.
-  Serial.begin(9600);
+  // Serial.begin(9600);
+  
+  // Setting baud rate to 9600, 8N1
+  UCSR0C |= 0b00000110;
+  UBRR0H = 0;
+  UBRR0L = 103;
+  UCSR0A = 0;
 }
 
 // Start the serial connection. For now we are using
@@ -354,29 +368,83 @@ void startSerial()
 {
   // Empty for now. To be replaced with bare-metal code
   // later on.
+  UCSR0B |= 0b10011000;
+}
+
+TResult writeBuffer(CircularBuffer<char, 200> *buf, char data){
+  if(buf->isFull()){
+    return PACKET_BAD;
+  }
+  buf->push(data);
+  return PACKET_OK;
+}
+
+ISR(USART_RX_vect)
+{
+  unsigned char data = UDR0;
+  writeBuffer(&_recvBuffer, data);
+}
+
+
+TResult readBuffer(CircularBuffer<char, 200> *buf, char* data){
+  if(buf->isEmpty()){
+    return PACKET_BAD;
+  }
+  *data = buf->shift();
+  return PACKET_OK;
 }
 
 // Read the serial port. Returns the read character in
 // ch if available. Also returns TRUE if ch is valid.
 // This will be replaced later with bare-metal code.
 
-int readSerial(char *buffer)
+int readSerial(char *line)
 {
 
+//  int count = 0;
+//
+//  while (Serial.available())
+//    buffer[count++] = Serial.read();
+//
+//  return count;
   int count = 0;
+  TResult result;
+  do {
+    result = readBuffer(&_recvBuffer, &line[count]);
 
-  while (Serial.available())
-    buffer[count++] = Serial.read();
-
+    if(result == PACKET_OK){
+      count++;
+    }
+  } while (result == PACKET_OK);
   return count;
 }
 
-// Write to the serial port. Replaced later with
-// bare-metal code
+ISR(USART_UDRE_vect){
+  char data;
+  TResult result = readBuffer(&_sendBuffer, &data);
 
-void writeSerial(const char *buffer, int len)
+  if (result == PACKET_OK){
+    UDR0 = data;
+  } else if(result == PACKET_BAD){
+    // Turn off UDRE interrupt
+    UCSR0B &= 0b11011111;
+  }
+}
+
+//// Write to the serial port. Replaced later with
+//// bare-metal code
+//
+void writeSerial(const char *line, int len)
 {
-  Serial.write(buffer, len);
+//  Serial.write(buffer, len);
+  TResult result = PACKET_OK;
+  // set i to 1 so we can send 0 to get the ball rolling
+  for (int i = 1; i<len && result == PACKET_OK; i++){
+    result = writeBuffer(&_sendBuffer, line[i]);
+  }
+  UDR0 = line[0];
+  // Turn on UDRE interrupt
+  UCSR0B |= 0b00100000;
 }
 
 /*
@@ -474,27 +542,6 @@ void reverse(float dist, float speed)
   dir = BACKWARD;
 
   int val = pwmVal(speed);
-  // if (dist > 0)
-  // {
-  //   deltaDist = dist;
-  // }
-  // else
-  // {
-  //   deltaDist = 9999999;
-  // }
-  // newDist = reverseDist + deltaDist;
-
-  // For now we will ignore dist and
-  // reverse indefinitely. We will fix this
-  // in Week 9.
-
-  // LF = Left forward pin, LR = Left reverse pin
-  // RF = Right forward pin, RR = Right reverse pin
-  // This will be replaced later with bare-metal code.
-  // analogWrite(LR, val);
-  // analogWrite(RR, val + pwmVal(MOTOR_OFFSET));
-  // analogWrite(LF, 0);
-  // analogWrite(RF, 0);
   OCR2A =val;
   
   
@@ -767,17 +814,16 @@ void handlePacket(TPacket *packet)
   }
 }
 
+char test[5] = "abc\n";
 void loop()
 {
-  // dbprintf("F: %d, B: %d\n", forwardDist, reverseDist);
-  //  Serial.print("F:");
-  //  Serial.println(forwardDist);
+//  sendStatus();
+//  writeSerial(test, sizeof(test)-1);
+//  delay(1000);
+//  readSerial(test);
+  
+  //   dbprintf("F: %d, B: %d\n", forwardDist, reverseDist);
 
-  // Uncomment the code below for Step 2 of Activity 3 in Week 8 Studio 2
-
-  //  forward(0, 100);
-
-  // Uncomment the code below for Week 9 Studio 2
 
   // put your main code here, to run repeatedly:
   TPacket recvPacket; // This holds commands from the Pi
