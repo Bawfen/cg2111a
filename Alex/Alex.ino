@@ -104,8 +104,8 @@ unsigned long newDist;
 unsigned long deltaTicks;
 unsigned long targetTicks;
 
-double frontUltraDist = 0;
-double humpUltraDist = 0;
+volatile float frontUltraDist = 0;
+volatile float humpUltraDist = 0;
 
 /*
  *
@@ -784,6 +784,7 @@ void setup()
   setupEINT();
   setupSerial();
   startSerial();
+  setupUltra();
   setupMotors();
   startMotors();
   enablePullups();
@@ -887,16 +888,13 @@ void loop()
   PORTB |= TRIGGER_PIN;
   delayMicroseconds(10); 
   PORTB &= ~TRIGGER_PIN;
-  delayMicroseconds(10); 
-  
-  long duration = pulseIn(HUMP_ECHO, HIGH, TIMEOUT); 
-  humpUltraDist = (duration / 2) * SPEED_OF_SOUND;
+  float duration = pulseIn(HUMP_ECHO, HIGH); 
+  humpUltraDist = duration * (SPEED_OF_SOUND/2);
 
   PORTB |= TRIGGER_PIN;
   delayMicroseconds(10); 
-  PORTB &= ~TRIGGER_PIN;
-  delayMicroseconds(10); 
+  PORTB &= ~TRIGGER_PIN; 
   
-  long duration2 = pulseIn(FRONT_ECHO, HIGH, TIMEOUT); 
-  frontUltraDist = (duration2 / 2) * SPEED_OF_SOUND;
+  float duration2 = pulseIn(FRONT_ECHO, HIGH); 
+  frontUltraDist = duration2 * (SPEED_OF_SOUND/2);
 }
