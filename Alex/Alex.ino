@@ -48,6 +48,18 @@ CircularBuffer<char, 200> _sendBuffer;
 #define RF_PORT (1 << 6)
 #define RR_PORT (1 << 5)
 
+#define TRIGGER 13
+#define TRIGGER_PIN (1 << 5)
+#define HUMP_ECHO 12
+#define HUMP_ECHO_PIN (1 << 4);
+#define FRONT_ECHO 11
+#define FRONT_ECHO_PIN (1 << 3);
+
+#define TIMEOUT 1000
+#define WAITING_TIME 1000
+
+double SPEED_OF_SOUND = 0.03498; 
+
 // For angle calculations
 //#define PI 3.141592654/
 
@@ -91,6 +103,9 @@ unsigned long newDist;
 
 unsigned long deltaTicks;
 unsigned long targetTicks;
+
+unsigned double frontUltraDist = 0;
+unsigned double humpUltraDist = 0;
 
 /*
  *
@@ -137,6 +152,8 @@ void sendStatus()
   statusPacket.params[7] = rightReverseTicksTurns;
   statusPacket.params[8] = forwardDist;
   statusPacket.params[9] = reverseDist;
+  statusPacket.params[10] = frontUltraDist;
+  statusPacket.params[11] = humpUltraDist;
   sendResponse(&statusPacket);
 }
 
@@ -481,6 +498,14 @@ void startMotors()
   TCCR2B |= 0b00000011;
 }
 
+// Set up the pins for the ultrasonic sensors
+void setupUltra()
+{
+  DDRB |= TRIGGER_PIN;
+  DDRB &= ~HUMP_ECHO_PIN;
+  DDRB &= ~FRONT_ECHO_PIN;
+}
+
 // Convert percentages to PWM values
 int pwmVal(float speed)
 {
@@ -523,10 +548,6 @@ void forward(float dist, float speed)
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
 
-  // analogWrite(LF, val);
-  // analogWrite(RF, val + pwmVal(MOTOR_OFFSET));
-  // analogWrite(LR, 0);
-  // analogWrite(RR, 0);
   OCR2A =val;
 
 }
@@ -575,15 +596,6 @@ void left(float ang, float speed)
 
   int val = pwmVal(speed);
 
-  // For now we will ignore ang. We will fix this in Week 9.
-  // We will also replace this code with bare-metal later.
-  // To turn left we reverse the left wheel and move
-  // the right wheel forward.
-  // analogWrite(LR, 0);
-  // analogWrite(LR, val);
-  // analogWrite(RF, val);
-  // analogWrite(LF, 0);
-  // analogWrite(RR, 0);
   OCR2A =val;
 }
 
@@ -610,15 +622,6 @@ void right(float ang, float speed)
 
    targetTicks = rightReverseTicksTurns + deltaTicks;
 
-  // For now we will ignore ang. We will fix this in Week 9.
-  // We will also replace this code with bare-metal later.
-  // To turn right we reverse the right wheel and move
-  // the left wheel forward.
-  // analogWrite(RR, 0);
-  // analogWrite(RR, val);
-  // analogWrite(LF, val);
-  // analogWrite(LR, 0);
-  // analogWrite(RF, 0);
   OCR2A =val;
 }
 
@@ -628,10 +631,6 @@ void stop()
 
   dir = STOP;
 
-  // analogWrite(LF, 0);
-  // analogWrite(LR, 0);
-  // analogWrite(RF, 0);
-  // analogWrite(RR, 0);
   OCR2A = 0;
 }
 
@@ -814,18 +813,9 @@ void handlePacket(TPacket *packet)
   }
 }
 
-char test[5] = "abc\n";
 void loop()
 {
-//  sendStatus();
-//  writeSerial(test, sizeof(test)-1);
-//  delay(1000);
-//  readSerial(test);
-  
-  //   dbprintf("F: %d, B: %d\n", forwardDist, reverseDist);
 
-
-  // put your main code here, to run repeatedly:
   TPacket recvPacket; // This holds commands from the Pi
 
   TResult result = readPacket(&recvPacket);
@@ -894,4 +884,19 @@ void loop()
        stop();
      }
    }
+  PORTB |= TRIGGER_PIN;
+  delayMicroseconds(10); 
+  PORTB &= ~TRIGGER_PIN;
+  delayMicroseconds(10); 
+  
+  long duration = pulseIn(HUMP_ECHO, HIGH, TIMEOUT); 
+  humpUltraDist = (duration / 2) * SPEED_OF_SOUND;
+
+  PORTB |= TRIGGER_PIN;
+  delayMicroseconds(10); 
+  PORTB &= ~TRIGGER_PIN;
+  delayMicroseconds(10); 
+  
+  long duration2 = pulseIn(FRONT_ECHO, HIGH, TIMEOUT); 
+  frontUltraDist = (duration2 / 2) * SPEED_OF_SOUND;
 }
