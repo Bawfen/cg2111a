@@ -104,8 +104,8 @@ unsigned long newDist;
 unsigned long deltaTicks;
 unsigned long targetTicks;
 
-unsigned double frontUltraDist = 0;
-unsigned double humpUltraDist = 0;
+double frontUltraDist = 0;
+double humpUltraDist = 0;
 
 /*
  *
