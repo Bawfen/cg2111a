@@ -60,8 +60,6 @@ CircularBuffer<char, 200> _sendBuffer;
 
 double SPEED_OF_SOUND = 0.03498; 
 
-// For angle calculations
-//#define PI 3.141592654/
 
 // ALex length and breadth
 #define ALEX_LENGTH 20
@@ -253,16 +251,6 @@ void enablePullups()
   PORTD |= 0b00001100;
 }
 
-//// Store the revolutions on Alex's left
-//// and right wheels
-// volatile unsigned long leftRevs;
-// volatile unsigned long rightRevs;
-//
-//// Forward and backward distance traveled
-// volatile unsigned long forwardDist;
-// volatile unsigned long reverseDist;
-
-//#define WHEEL_CIRC          21.5/
 
 // Functions to be called by INT0 and INT1 ISRs.
 void leftISR()
@@ -360,11 +348,8 @@ ISR(TIMER2_OVF_vect) {
  * Setup and start codes for serial communications
  *
  */
-
- #define UDRIEMASK = 0b00100000
-// Set up the serial connection. For now we are using
-// Arduino Wiring, you will replace this later
-// with bare-metal code.
+ 
+// Set up the serial connection.
 void setupSerial()
 {
   // To replace later with bare-metal.
@@ -377,14 +362,10 @@ void setupSerial()
   UCSR0A = 0;
 }
 
-// Start the serial connection. For now we are using
-// Arduino wiring and this function is empty. We will
-// replace this later with bare-metal code.
-
+// Start the serial connection.
 void startSerial()
 {
-  // Empty for now. To be replaced with bare-metal code
-  // later on.
+  // Turning on interrupt and enabling
   UCSR0B |= 0b10011000;
 }
 
@@ -411,19 +392,9 @@ TResult readBuffer(CircularBuffer<char, 200> *buf, char* data){
   return PACKET_OK;
 }
 
-// Read the serial port. Returns the read character in
-// ch if available. Also returns TRUE if ch is valid.
-// This will be replaced later with bare-metal code.
-
+// Read the serial port.
 int readSerial(char *line)
 {
-
-//  int count = 0;
-//
-//  while (Serial.available())
-//    buffer[count++] = Serial.read();
-//
-//  return count;
   int count = 0;
   TResult result;
   do {
@@ -448,9 +419,7 @@ ISR(USART_UDRE_vect){
   }
 }
 
-//// Write to the serial port. Replaced later with
-//// bare-metal code
-//
+//// Write to the serial port.
 void writeSerial(const char *line, int len)
 {
 //  Serial.write(buffer, len);
@@ -469,9 +438,7 @@ void writeSerial(const char *line, int len)
  *
  */
 
-// Set up Alex's motors. Right now this is empty, but
-// later you will replace it with code to set up the PWMs
-// to drive the motors.
+// Set up Alex's motors
 void setupMotors()
 {
   /* Our motor set up is:
@@ -483,7 +450,11 @@ void setupMotors()
   cli();
   TCNT2 = 0;
   OCR2A = 0;
+
+  // Enabling Compare Match A and Timer Overflow interrupts
   TIMSK2 = 0b00000011;
+
+  // WGM Mode 3 (011): Fast PWM 
   TCCR2A = 0b00000011;
   TCCR2B = 0b00000000;
   sei();
@@ -491,10 +462,9 @@ void setupMotors()
 }
 
 // Start the PWM for Alex's motors.
-// We will implement this later. For now it is
-// blank.
 void startMotors()
 {
+  // Setting prescaler to 32
   TCCR2B |= 0b00000011;
 }
 
@@ -530,23 +500,15 @@ void forward(float dist, float speed)
 
   int val = pwmVal(speed);
 
-  // if (dist > 0)
-  // {
-  //   deltaDist = dist;
-  // }
-  // else
-  // {
-  //   deltaDist = 9999999;
-  // }
-  // newDist = forwardDist + deltaDist;
-
-  // For now we will ignore dist and move
-  // forward indefinitely. We will fix this
-  // in Week 9.
-
-  // LF = Left forward pin, LR = Left reverse pin
-  // RF = Right forward pin, RR = Right reverse pin
-  // This will be replaced later with bare-metal code.
+   if (dist > 0)
+   {
+     deltaDist = dist;
+   }
+   else
+   {
+     deltaDist = 9999999;
+   }
+   newDist = forwardDist + deltaDist;
 
   OCR2A =val;
 
@@ -561,6 +523,15 @@ void reverse(float dist, float speed)
 {
 
   dir = BACKWARD;
+  if (dist > 0)
+   {
+     deltaDist = dist;
+   }
+   else
+   {
+     deltaDist = 9999999;
+   }
+   newDist = reverseDist + deltaDist;
 
   int val = pwmVal(speed);
   OCR2A =val;
@@ -693,7 +664,6 @@ void clearOneCounter(int which)
     break;
   }
 }
-// Intialize Vincet's internal states
 
 void initializeState()
 {
