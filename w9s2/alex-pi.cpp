@@ -171,33 +171,18 @@ void *receiveThread(void *p)
   }
 }
 
-void flushInput()
-{
-  char c;
-
-  while ((c = getchar()) != '\n' && c != EOF)
-    ;
-}
-
-void getParams(TPacket *commandPacket)
-{
-  printf("Enter distance/angle in cm/degrees (e.g. 50) and power in %% (e.g. 75) separated by space.\n");
-  printf("E.g. 50 75 means go at 50 cm at 75%% power for forward/backward, or 50 degrees left or right turn at 75%%  power\n");
-  //	scanf("%d %d", &commandPacket->params[0], &commandPacket->params[1]);
-  flushInput();
-}
-
-int change = 0;
-int SPEED = 79 + change;
-int TURN_SPEED = 87 + change ;
+int change = 0;               // to increase/decrease motor PWM when changes in battery level
+int SPEED = 79 + change;      // linear speed
+int TURN_SPEED = 87 + change; // Turning speed
 
 void sendCommand(char command)
 {
+  // process command and compile into packet
   TPacket commandPacket;
 
   commandPacket.packetType = PACKET_TYPE_COMMAND;
   commandPacket.params[0] = 0;
-  commandPacket.params[1] = SPEED+change;
+  commandPacket.params[1] = SPEED + change;
 
   switch (command)
   {
@@ -216,7 +201,7 @@ void sendCommand(char command)
   case 'l':
   case 'L':
     commandPacket.params[0] = 15;
-    commandPacket.params[1] = TURN_SPEED+change;
+    commandPacket.params[1] = TURN_SPEED + change;
     commandPacket.command = COMMAND_TURN_LEFT;
     sendPacket(&commandPacket);
     break;
@@ -224,7 +209,7 @@ void sendCommand(char command)
   case 'r':
   case 'R':
     commandPacket.params[0] = 15;
-    commandPacket.params[1] = TURN_SPEED+change;
+    commandPacket.params[1] = TURN_SPEED + change;
     commandPacket.command = COMMAND_TURN_RIGHT;
     sendPacket(&commandPacket);
     break;
@@ -259,10 +244,15 @@ void sendCommand(char command)
 }
 
 char curr_cmd;
+
 void sub_callback(const sensor_msgs::Joy &joy)
 {
+  // callback function that will be called constantly
+  // to process joysticks command
   char cmd;
-  if (joy.buttons[DPAD_UP] != 0 )
+
+  // translate joysticks command into directional command
+  if (joy.buttons[DPAD_UP] != 0)
   {
     cmd = 'f';
   }
@@ -277,7 +267,7 @@ void sub_callback(const sensor_msgs::Joy &joy)
   }
   else if (joy.buttons[BUTTON_SQUARE] != 0)
   {
-    TURN_SPEED = 87 +change;
+    TURN_SPEED = 87 + change;
     cmd = 'l';
   }
   else if (joy.buttons[DPAD_RIGHT] != 0)
@@ -300,64 +290,65 @@ void sub_callback(const sensor_msgs::Joy &joy)
   }
   else if (joy.buttons[4] == 1)
   {
-    if(SPEED == BOOST){
+    if (SPEED == BOOST)
+    {
       SPEED = 79 + change;
       ROS_INFO("Normal_Mode");
-    }else{
+    }
+    else
+    {
       SPEED = BOOST;
       ROS_INFO("Boost_Mode");
     }
-    if(SPEED >=100){
+    if (SPEED >= 100)
+    {
       SPEED = 100;
     }
     ROS_INFO("Speed: %d", SPEED);
-  }else if(joy.buttons[8] == 1){
+  }
+  else if (joy.buttons[8] == 1)
+  {
     cmd = 'l';
-    for(int i = 0; i < 25; i+=1){
-      TURN_SPEED = 87+change;
+    for (int i = 0; i < 25; i += 1)
+    {
+      TURN_SPEED = 87 + change;
       sendCommand(cmd);
       curr_cmd = cmd;
       usleep(450000);
-      
     }
-  }else if(joy.buttons[6] == 1){
+  }
+  else if (joy.buttons[6] == 1)
+  {
     change -= 2;
-    ROS_INFO("SPEED :%d,  TURN_SPEED: %d",SPEED+change, TURN_SPEED+change);
-  }else if(joy.buttons[7] == 1){
+    ROS_INFO("SPEED :%d,  TURN_SPEED: %d", SPEED + change, TURN_SPEED + change);
+  }
+  else if (joy.buttons[7] == 1)
+  {
     change += 2;
-    ROS_INFO("SPEED :%d,  TURN_SPEED: %d",SPEED+change, TURN_SPEED+ change);
-  }else
+    ROS_INFO("SPEED :%d,  TURN_SPEED: %d", SPEED + change, TURN_SPEED + change);
+  }
+  else
   {
     cmd = 's';
   }
 
   if (cmd != curr_cmd)
   {
+    // sendCommand to Arduino only when changes in command
+    // Ex: consantly send Forward command to Arduino will jam the serial communications
     sendCommand(cmd);
     curr_cmd = cmd;
     ROS_INFO("%c", cmd);
     usleep(400000);
   }
 }
-/* void subscriberCallback(const sensor_msgs::Joy &joy){
-
-//  printf("%f",joy.axes[2]);
-char cmd;
-if(joy.axes[1] != 0){
-cmd = 'f';
-}else{
-cmd = 's';
-}
-//    sendCommand(cmd);
-ROS_INFO("%c",cmd);
-}*/
 
 int main(int argc, char **argv)
-
 {
+  // get port number from operator
   char port_name[] = "/dev/ttyACM0";
   printf("Enter port:");
-  scanf("%c",&port_name[11]);
+  scanf("%c", &port_name[11]);
 
   // Connect to the Arduino
   startSerial(port_name, BAUD_RATE, 8, 'N', 1, 5);
@@ -374,23 +365,19 @@ int main(int argc, char **argv)
 
   // Send a hello packet
   TPacket helloPacket;
-
   helloPacket.packetType = PACKET_TYPE_HELLO;
   sendPacket(&helloPacket);
 
+  // Initiating Pi as ROS node
   ros::init(argc, argv, "pi");
   ros::NodeHandle nh;
+
+  // subcribing to /joy topic for joysticks command
   ros::Subscriber sub = nh.subscribe("joy", 1, sub_callback);
+
   while (!exitFlag)
   {
-    /*char ch;
-      printf("Command (f=forward, b=reverse, l=turn left, r=turn right, s=stop, c=clear stats, g=get stats q=exit)\n");
-      scanf("%c", &ch);
-
-    // Purge extraneous characters from input stream
-    flushInput();
-
-    sendCommand(ch);*/
+    // while exitFlag not triggered, call sub_callback
     ros::spinOnce();
   }
 
