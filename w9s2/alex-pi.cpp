@@ -334,8 +334,8 @@ void sub_callback(const sensor_msgs::Joy &joy)
 
   if (cmd != curr_cmd)
   {
-    // sendCommand to Arduino only when changes in command
-    // Ex: consantly send Forward command to Arduino will jam the serial communications
+    // sendCommand to Arduino only when the command changes
+    // Ex: constantly sending Forward command to Arduino will jam the serial communications
     sendCommand(cmd);
     curr_cmd = cmd;
     ROS_INFO("%c", cmd);
